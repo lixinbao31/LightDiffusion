@@ -1,0 +1,307 @@
+# ============================================
+# configs/small_model.yaml - 小模型配置（快速实验）
+# ============================================
+
+# 继承默认配置，只覆盖需要修改的部分
+model:
+  channels: [32, 64, 128, 256]          # 更小的通道数
+  num_res_blocks: 1                     # 更少的残差块
+  time_emb_dim: 128                     # 更小的时间嵌入
+
+diffusion:
+  timesteps: 500                        # 更少的扩散步数
+  sampling:
+    ddim_steps: 20                      # 更快的采样
+
+data:
+  image_size: 128                       # 更小的图像
+  batch_size: 32                        # 可以用更大的批次
+
+training:
+  epochs: 50                            # 更少的训练轮数
+  use_amp: true                         # 必须使用混合精度
+
+optimizer:
+  lr: 0.0005                            # 更大的学习率（因为模型小）
+
+# ============================================
+# configs/large_model.yaml - 大模型配置（最佳质量）
+# ============================================
+
+model:
+  channels: [128, 256, 512, 512]        # 更大的通道数
+  num_res_blocks: 3                     # 更多的残差块
+  time_emb_dim: 512                     # 更大的时间嵌入
+  attention_resolutions: [32, 16, 8]    # 更多层使用注意力
+  use_checkpoint: true                  # 使用梯度检查点节省显存
+
+diffusion:
+  timesteps: 1000
+  sampling:
+    ddim_steps: 100                     # 更多采样步数以提高质量
+
+data:
+  image_size: 512                       # 高分辨率
+  batch_size: 4                        # 小批次（因为模型大）
+
+training:
+  epochs: 200
+  gradient_accumulation_steps: 4        # 梯度累积以模拟大批次
+  use_amp: true
+
+optimizer:
+  lr: 0.00005                          # 更小的学习率（稳定训练）
+
+# ============================================
+# configs/low_gpu_memory.yaml - 低显存配置
+# ============================================
+
+model:
+  channels: [32, 64, 128, 256]
+  use_checkpoint: true                  # 梯度检查点必须开启
+
+data:
+  batch_size: 2                        # 极小批次
+  image_size: 128                       # 小图像
+  num_workers: 2                        # 减少数据加载器内存
+
+training:
+  gradient_accumulation_steps: 8        # 通过累积模拟批次16
+  use_amp: true                         # 必须使用混合精度
+  
+  ema:
+    enabled: false                      # 关闭EMA节省显存
+
+system:
+  cudnn_benchmark: false                # 关闭自动调优节省显存
+
+# ============================================
+# configs/fast_training.yaml - 快速训练配置
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  num_res_blocks: 1
+
+diffusion:
+  timesteps: 500                        # 减少扩散步数
+  loss_type: l1                          # L1损失收敛更快
+
+data:
+  batch_size: 64                        # 大批次加速训练
+  num_workers: 8
+
+optimizer:
+  type: Adam                             # Adam比AdamW快
+  lr: 0.001                             # 较大学习率
+
+scheduler:
+  type: cosine                          # 简单调度器
+  T_max: 10000
+
+training:
+  epochs: 30                            # 少量epoch
+  use_amp: true
+  log_every: 500                        # 减少日志开销
+  sample_every: 5000
+  validate_every: 5000
+
+# ============================================
+# configs/production.yaml - 生产部署配置
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  dropout: 0.0                          # 推理时不需要dropout
+
+diffusion:
+  sampling:
+    method: ddim
+    ddim_steps: 30                      # 平衡质量和速度
+    ddim_eta: 0.0                       # 确定性生成
+    clip_denoised: true
+
+inference:
+  batch_size: 4                        # 批量处理
+  num_samples: 1
+  seed: null                            # 随机种子（多样性）
+
+system:
+  device: cuda
+  cudnn_benchmark: true                 # 优化推理速度
+  deterministic: false                  # 不需要确定性
+
+webapp:
+  gradio:
+    server_name: "0.0.0.0"
+    server_port: 7860
+    share: false
+    auth: ["admin", "password123"]      # 生产环境需要认证
+    
+  api:
+    host: "0.0.0.0"
+    port: 8000
+    workers: 4                          # 多进程处理请求
+
+# ============================================
+# configs/research.yaml - 研究实验配置
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  num_res_blocks: 2
+
+diffusion:
+  timesteps: 1000
+  beta_schedule: cosine                  # 尝试不同的调度
+  loss_type: l2
+
+data:
+  image_size: 256
+  batch_size: 16
+  
+  augmentation:                         # 更多数据增强
+    horizontal_flip: true
+    vertical_flip: true
+    random_crop: true
+    color_jitter: true
+    rotation: 30
+
+optimizer:
+  type: AdamW
+  lr: 0.0001
+  weight_decay: 0.05                    # 更强的正则化
+
+scheduler:
+  type: cosine_warmup
+  warmup_steps: 5000                    # 长预热
+  T_max: 100000
+  eta_min: 0.0000001
+
+training:
+  epochs: 300                           # 充分训练
+  use_amp: true
+  
+  ema:
+    enabled: true                       # 使用EMA提高稳定性
+    decay: 0.9999
+    
+  early_stopping:
+    enabled: true                       # 防止过拟合
+    patience: 30
+
+losses:
+  main_loss:
+    type: l2
+    weight: 1.0
+    
+  perceptual_loss:                      # 添加感知损失
+    enabled: true
+    weight: 0.1
+    
+  additional_losses:
+    tv_loss:
+      enabled: true
+      weight: 0.001
+
+metrics:
+  calculate: [psnr, ssim, lpips, mae, mse, fid]
+  fid:
+    enabled: true
+    num_samples: 5000
+
+experiment:
+  name: "diffusion_research_v1"
+  description: "Testing new architecture improvements"
+  tags: [research, ablation, architecture]
+  
+  hyperparam_search:
+    enabled: true
+    method: bayesian
+    n_trials: 50
+
+# ============================================
+# configs/denoise_specific.yaml - 去噪任务专用
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+
+diffusion:
+  timesteps: 500                        # 去噪不需要太多步数
+
+data:
+  task_specific:
+    denoise:
+      noise_types: [gaussian]           # 专注于高斯噪声
+      noise_levels: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
+
+losses:
+  main_loss:
+    type: l1                            # L1对去噪效果好
+    
+  additional_losses:
+    edge_loss:                          # 保持边缘
+      enabled: true
+      weight: 0.05
+
+# ============================================
+# configs/super_resolution.yaml - 超分辨率专用
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  attention_resolutions: [16, 8, 4]     # 更多注意力层
+
+data:
+  image_size: 256
+  
+  task_specific:
+    super_resolution:
+      scale_factors: [4]                # 专注于4倍超分
+      degradation: blur_downsample      # 更真实的退化
+
+losses:
+  main_loss:
+    type: l2
+    
+  perceptual_loss:                      # 感知损失很重要
+    enabled: true
+    weight: 0.2
+    
+  additional_losses:
+    edge_loss:
+      enabled: true
+      weight: 0.1
+
+# ============================================
+# configs/inpainting.yaml - 图像修复专用
+# ============================================
+
+model:
+  in_channels: 4                        # 3 RGB + 1 mask
+  channels: [64, 128, 256, 512]
+
+data:
+  task_specific:
+    inpainting:
+      mask_type: irregular              # 不规则掩码更真实
+      mask_ratio: [0.2, 0.6]           # 各种掩码大小
+
+diffusion:
+  conditioning:
+    enabled: true                       # 条件生成
+    type: concat                        # 连接掩码
+
+losses:
+  main_loss:
+    type: l2
+    
+  perceptual_loss:
+    enabled: true
+    weight: 0.15
+    
+  additional_losses:
+    style_loss:                         # 保持风格一致性
+      enabled: true
+      weight: 0.05

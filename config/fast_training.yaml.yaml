@@ -1,0 +1,30 @@
+# ============================================
+# configs/fast_training.yaml - 快速训练配置
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  num_res_blocks: 1
+
+diffusion:
+  timesteps: 500                        # 减少扩散步数
+  loss_type: l1                          # L1损失收敛更快
+
+data:
+  batch_size: 64                        # 大批次加速训练
+  num_workers: 8
+
+optimizer:
+  type: Adam                             # Adam比AdamW快
+  lr: 0.001                             # 较大学习率
+
+scheduler:
+  type: cosine                          # 简单调度器
+  T_max: 10000
+
+training:
+  epochs: 30                            # 少量epoch
+  use_amp: true
+  log_every: 500                        # 减少日志开销
+  sample_every: 5000
+  validate_every: 5000

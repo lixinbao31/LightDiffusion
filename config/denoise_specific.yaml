@@ -1,0 +1,24 @@
+# ============================================
+# configs/denoise_specific.yaml - 去噪任务专用
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+
+diffusion:
+  timesteps: 500                        # 去噪不需要太多步数
+
+data:
+  task_specific:
+    denoise:
+      noise_types: [gaussian]           # 专注于高斯噪声
+      noise_levels: [0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
+
+losses:
+  main_loss:
+    type: l1                            # L1对去噪效果好
+    
+  additional_losses:
+    edge_loss:                          # 保持边缘
+      enabled: true
+      weight: 0.05

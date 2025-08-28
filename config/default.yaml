@@ -1,0 +1,308 @@
+# LightDiffusion 默认配置文件
+# 所有训练和推理参数的配置
+
+# ============================================
+# 模型架构配置
+# ============================================
+model:
+  # U-Net 架构参数
+  in_channels: 3                        # 输入通道数（RGB图像）
+  out_channels: 3                       # 输出通道数
+  channels: [64, 128, 256, 512]        # 各层通道数（可调整以改变模型大小）
+  # channels: [32, 64, 128, 256]       # 更小的模型（用于快速实验）
+  time_emb_dim: 256                     # 时间嵌入维度
+  num_res_blocks: 2                     # 每层残差块数量
+  attention_resolutions: [16, 8]        # 在哪些分辨率使用注意力
+  dropout: 0.0                          # Dropout 概率
+  use_checkpoint: false                 # 是否使用梯度检查点（节省显存）
+  
+  # VAE 配置（如果使用潜在空间扩散）
+  vae:
+    enabled: false                      # 是否使用 VAE
+    latent_channels: 4                  # 潜在空间通道数
+    channels_mult: [1, 2, 4, 4]        # VAE 编码器通道倍数
+
+# ============================================
+# 扩散模型配置
+# ============================================
+diffusion:
+  # 扩散过程参数
+  timesteps: 1000                       # 扩散步数（训练时）
+  beta_schedule: cosine                  # Beta 调度类型: linear, cosine, sigmoid
+  beta_start: 0.0001                    # 起始 beta 值（linear schedule）
+  beta_end: 0.02                        # 结束 beta 值（linear schedule）
+  loss_type: l2                          # 损失函数类型: l1, l2, huber
+  
+  # 采样配置
+  sampling:
+    method: ddim                         # 采样方法: ddpm, ddim, dpm
+    ddim_steps: 50                       # DDIM 采样步数
+    ddim_eta: 0.0                       # DDIM eta 参数（0为确定性）
+    clip_denoised: true                  # 是否裁剪去噪结果到 [-1, 1]
+    
+  # 条件生成配置
+  conditioning:
+    enabled: false                       # 是否使用条件生成
+    type: concat                         # 条件类型: concat, crossattn, adain
+    
+# ============================================
+# 数据配置
+# ============================================
+data:
+  # 数据集路径
+  train_dir: dataset/train              # 训练集目录
+  val_dir: dataset/val                  # 验证集目录
+  test_dir: dataset/test                # 测试集目录（可选）
+  
+  # 数据加载参数
+  image_size: 256                       # 图像尺寸
+  batch_size: 16                        # 批次大小
+  # batch_size: 8                       # 如果 GPU 内存不足，减小批次
+  num_workers: 4                        # 数据加载线程数
+  pin_memory: true                      # 是否固定内存（加速 GPU 传输）
+  drop_last: true                       # 是否丢弃最后不完整的批次
+  
+  # 数据增强
+  augmentation:
+    horizontal_flip: true                # 水平翻转
+    vertical_flip: false                 # 垂直翻转
+    random_crop: false                   # 随机裁剪
+    color_jitter: true                   # 颜色抖动
+    rotation: 10                         # 随机旋转角度（度）
+    
+  # 特定任务配置
+  task_specific:
+    # 去噪任务
+    denoise:
+      noise_types: [gaussian, salt_pepper, poisson]  # 噪声类型
+      noise_levels: [0.1, 0.2, 0.3]                 # 噪声强度
+    
+    # 超分辨率任务
+    super_resolution:
+      scale_factors: [2, 4]              # 放大倍数
+      degradation: bicubic               # 退化类型
+      
+    # 修复任务
+    inpainting:
+      mask_type: random                  # 掩码类型: random, center, irregular
+      mask_ratio: [0.1, 0.5]            # 掩码比例范围
+
+# ============================================
+# 优化器配置
+# ============================================
+optimizer:
+  type: AdamW                           # 优化器类型: Adam, AdamW, SGD, RMSprop
+  lr: 0.0001                            # 学习率
+  betas: [0.9, 0.999]                  # Adam beta 参数
+  weight_decay: 0.01                    # 权重衰减（L2正则化）
+  eps: 1.0e-08                          # Adam epsilon
+  amsgrad: false                        # 是否使用 AMSGrad
+
+# ============================================
+# 学习率调度器配置
+# ============================================
+scheduler:
+  type: cosine_warmup                   # 调度器类型
+  # 预热配置
+  warmup_steps: 1000                    # 预热步数
+  warmup_start_lr: 0.0                  # 预热起始学习率
+  
+  # 余弦退火配置
+  T_max: 100000                         # 余弦周期
+  eta_min: 0.000001                     # 最小学习率
+  
+  # Step 调度器配置（如果使用）
+  step_size: 30                         # 步长
+  gamma: 0.1                            # 衰减因子
+  
+  # MultiStep 调度器配置（如果使用）
+  milestones: [30, 60, 90]             # 里程碑
+  
+  # Plateau 调度器配置（如果使用）
+  patience: 10                          # 耐心值
+  factor: 0.5                           # 降低因子
+  threshold: 0.001                      # 阈值
+
+# ============================================
+# 训练配置
+# ============================================
+training:
+  # 基本训练参数
+  epochs: 100                           # 训练轮数
+  gradient_accumulation_steps: 1        # 梯度累积步数
+  gradient_clip_norm: 1.0               # 梯度裁剪范数
+  
+  # 混合精度训练
+  use_amp: true                         # 是否使用自动混合精度
+  amp_opt_level: O1                     # AMP 优化级别: O0, O1, O2, O3
+  
+  # 分布式训练
+  distributed: false                     # 是否使用分布式训练
+  backend: nccl                         # 分布式后端: nccl, gloo
+  world_size: 1                         # 进程数
+  
+  # 训练策略
+  ema:
+    enabled: true                       # 是否使用 EMA（指数移动平均）
+    decay: 0.9999                       # EMA 衰减率
+    update_every: 10                    # 更新频率
+    
+  # 日志和保存
+  log_every: 100                        # 日志频率（步）
+  sample_every: 1000                    # 采样频率（步）
+  save_every: 5000                     # 保存频率（步）
+  validate_every: 1000                  # 验证频率（步）
+  
+  # 检查点
+  resume_from: null                     # 恢复训练的检查点路径
+  save_best_only: true                  # 只保存最佳模型
+  max_checkpoints: 5                    # 最多保存检查点数
+  
+  # 早停
+  early_stopping:
+    enabled: false                      # 是否启用早停
+    patience: 20                        # 早停耐心值
+    min_delta: 0.001                    # 最小改善值
+
+# ============================================
+# 损失函数配置
+# ============================================
+losses:
+  # 主要损失
+  main_loss:
+    type: l2                            # 主损失类型: l1, l2, huber
+    weight: 1.0                         # 权重
+    
+  # 感知损失
+  perceptual_loss:
+    enabled: false                      # 是否使用感知损失
+    weight: 0.1                         # 权重
+    network: alex                       # 网络类型: alex, vgg, squeeze
+    
+  # 其他损失
+  additional_losses:
+    tv_loss:                           # 全变分损失
+      enabled: false
+      weight: 0.01
+    edge_loss:                          # 边缘损失
+      enabled: false
+      weight: 0.1
+    style_loss:                         # 风格损失
+      enabled: false
+      weight: 0.01
+
+# ============================================
+# 评估指标配置
+# ============================================
+metrics:
+  # 计算哪些指标
+  calculate: [psnr, ssim, lpips, mae, mse]
+  
+  # 主要指标（用于模型选择）
+  primary_metric: psnr
+  metric_mode: max                      # max 或 min
+  
+  # FID 计算（可选）
+  fid:
+    enabled: false                      # 是否计算 FID
+    num_samples: 10000                  # 用于 FID 的样本数
+    batch_size: 50                      # FID 计算批次大小
+
+# ============================================
+# 推理配置
+# ============================================
+inference:
+  # 采样参数
+  num_samples: 4                        # 生成样本数
+  batch_size: 1                        # 推理批次大小
+  seed: 42                              # 随机种子（确保可重复性）
+  
+  # DDIM 参数
+  ddim_steps: 50                        # DDIM 步数
+  ddim_eta: 0.0                        # eta 参数
+  
+  # 后处理
+  post_processing:
+    denormalize: true                   # 反归一化
+    clip: true                          # 裁剪到 [0, 1]
+    to_uint8: true                      # 转换为 uint8
+
+# ============================================
+# 可视化配置
+# ============================================
+visualization:
+  # TensorBoard
+  use_tensorboard: true                 # 是否使用 TensorBoard
+  tensorboard_dir: outputs/tensorboard  # TensorBoard 日志目录
+  
+  # Weights & Biases（可选）
+  use_wandb: false                      # 是否使用 W&B
+  wandb_project: lightdiffusion        # W&B 项目名
+  wandb_entity: null                    # W&B 实体
+  
+  # 采样可视化
+  num_vis_samples: 8                    # 可视化样本数
+  save_intermediate: false              # 是否保存中间步骤
+
+# ============================================
+# 系统配置
+# ============================================
+system:
+  # 设备配置
+  device: cuda                          # 设备: cuda, cpu, mps
+  device_ids: [0]                       # GPU ID（多 GPU 时）
+  
+  # 路径配置
+  output_dir: outputs                   # 输出目录
+  log_dir: logs                         # 日志目录
+  cache_dir: .cache                    # 缓存目录
+  
+  # 随机种子
+  seed: 42                              # 全局随机种子
+  deterministic: true                   # 是否使用确定性算法
+  
+  # 性能配置
+  cudnn_benchmark: true                 # CuDNN 自动调优
+  cudnn_deterministic: false            # CuDNN 确定性
+  
+  # 调试配置
+  debug: false                          # 调试模式
+  verbose: 1                            # 详细级别: 0, 1, 2
+  profile: false                        # 是否进行性能分析
+
+# ============================================
+# Web 应用配置
+# ============================================
+webapp:
+  # Gradio 配置
+  gradio:
+    server_name: "0.0.0.0"              # 服务器地址
+    server_port: 7860                    # 端口
+    share: false                         # 是否生成公共链接
+    auth: null                          # 认证: [username, password]
+    
+  # FastAPI 配置
+  api:
+    host: "0.0.0.0"                     # API 主机
+    port: 8000                          # API 端口
+    reload: false                        # 自动重载
+    workers: 1                          # 工作进程数
+
+# ============================================
+# 实验配置（用于研究）
+# ============================================
+experiment:
+  name: default_experiment              # 实验名称
+  description: "Default configuration"  # 实验描述
+  tags: [baseline, diffusion]          # 标签
+  
+  # 消融实验
+  ablation:
+    enabled: false                      # 是否进行消融实验
+    components: []                      # 要消融的组件
+    
+  # 超参数搜索
+  hyperparam_search:
+    enabled: false                      # 是否进行超参数搜索
+    method: grid                        # 搜索方法: grid, random, bayesian
+    n_trials: 100                       # 试验次数

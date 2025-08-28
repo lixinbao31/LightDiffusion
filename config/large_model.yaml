@@ -1,0 +1,27 @@
+# ============================================
+# configs/large_model.yaml - 大模型配置（最佳质量）
+# ============================================
+
+model:
+  channels: [128, 256, 512, 512]        # 更大的通道数
+  num_res_blocks: 3                     # 更多的残差块
+  time_emb_dim: 512                     # 更大的时间嵌入
+  attention_resolutions: [32, 16, 8]    # 更多层使用注意力
+  use_checkpoint: true                  # 使用梯度检查点节省显存
+
+diffusion:
+  timesteps: 1000
+  sampling:
+    ddim_steps: 100                     # 更多采样步数以提高质量
+
+data:
+  image_size: 512                       # 高分辨率
+  batch_size: 4                        # 小批次（因为模型大）
+
+training:
+  epochs: 200
+  gradient_accumulation_steps: 4        # 梯度累积以模拟大批次
+  use_amp: true
+
+optimizer:
+  lr: 0.00005                          # 更小的学习率（稳定训练）

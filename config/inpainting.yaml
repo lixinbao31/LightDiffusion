@@ -1,0 +1,31 @@
+# ============================================
+# configs/inpainting.yaml - 图像修复专用
+# ============================================
+
+model:
+  in_channels: 4                        # 3 RGB + 1 mask
+  channels: [64, 128, 256, 512]
+
+data:
+  task_specific:
+    inpainting:
+      mask_type: irregular              # 不规则掩码更真实
+      mask_ratio: [0.2, 0.6]           # 各种掩码大小
+
+diffusion:
+  conditioning:
+    enabled: true                       # 条件生成
+    type: concat                        # 连接掩码
+
+losses:
+  main_loss:
+    type: l2
+    
+  perceptual_loss:
+    enabled: true
+    weight: 0.15
+    
+  additional_losses:
+    style_loss:                         # 保持风格一致性
+      enabled: true
+      weight: 0.05

@@ -1,0 +1,76 @@
+# ============================================
+# configs/research.yaml - 研究实验配置
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  num_res_blocks: 2
+
+diffusion:
+  timesteps: 1000
+  beta_schedule: cosine                  # 尝试不同的调度
+  loss_type: l2
+
+data:
+  image_size: 256
+  batch_size: 16
+  
+  augmentation:                         # 更多数据增强
+    horizontal_flip: true
+    vertical_flip: true
+    random_crop: true
+    color_jitter: true
+    rotation: 30
+
+optimizer:
+  type: AdamW
+  lr: 0.0001
+  weight_decay: 0.05                    # 更强的正则化
+
+scheduler:
+  type: cosine_warmup
+  warmup_steps: 5000                    # 长预热
+  T_max: 100000
+  eta_min: 0.0000001
+
+training:
+  epochs: 300                           # 充分训练
+  use_amp: true
+  
+  ema:
+    enabled: true                       # 使用EMA提高稳定性
+    decay: 0.9999
+    
+  early_stopping:
+    enabled: true                       # 防止过拟合
+    patience: 30
+
+losses:
+  main_loss:
+    type: l2
+    weight: 1.0
+    
+  perceptual_loss:                      # 添加感知损失
+    enabled: true
+    weight: 0.1
+    
+  additional_losses:
+    tv_loss:
+      enabled: true
+      weight: 0.001
+
+metrics:
+  calculate: [psnr, ssim, lpips, mae, mse, fid]
+  fid:
+    enabled: true
+    num_samples: 5000
+
+experiment:
+  name: "diffusion_research_v1"
+  description: "Testing new architecture improvements"
+  tags: [research, ablation, architecture]
+  
+  hyperparam_search:
+    enabled: true
+    method: bayesian
+    n_trials: 50

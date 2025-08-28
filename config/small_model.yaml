@@ -1,0 +1,25 @@
+# ============================================
+# configs/small_model.yaml - 小模型配置（快速实验）
+# ============================================
+
+# 继承默认配置，只覆盖需要修改的部分
+model:
+  channels: [32, 64, 128, 256]          # 更小的通道数
+  num_res_blocks: 1                     # 更少的残差块
+  time_emb_dim: 128                     # 更小的时间嵌入
+
+diffusion:
+  timesteps: 500                        # 更少的扩散步数
+  sampling:
+    ddim_steps: 20                      # 更快的采样
+
+data:
+  image_size: 128                       # 更小的图像
+  batch_size: 32                        # 可以用更大的批次
+
+training:
+  epochs: 50                            # 更少的训练轮数
+  use_amp: true                         # 必须使用混合精度
+
+optimizer:
+  lr: 0.0005                            # 更大的学习率（因为模型小）

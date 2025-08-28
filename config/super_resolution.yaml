@@ -1,0 +1,28 @@
+# ============================================
+# configs/super_resolution.yaml - 超分辨率专用
+# ============================================
+
+model:
+  channels: [64, 128, 256, 512]
+  attention_resolutions: [16, 8, 4]     # 更多注意力层
+
+data:
+  image_size: 256
+  
+  task_specific:
+    super_resolution:
+      scale_factors: [4]                # 专注于4倍超分
+      degradation: blur_downsample      # 更真实的退化
+
+losses:
+  main_loss:
+    type: l2
+    
+  perceptual_loss:                      # 感知损失很重要
+    enabled: true
+    weight: 0.2
+    
+  additional_losses:
+    edge_loss:
+      enabled: true
+      weight: 0.1

@@ -1,0 +1,22 @@
+# ============================================
+# configs/low_gpu_memory.yaml - 低显存配置
+# ============================================
+
+model:
+  channels: [32, 64, 128, 256]
+  use_checkpoint: true                  # 梯度检查点必须开启
+
+data:
+  batch_size: 2                        # 极小批次
+  image_size: 128                       # 小图像
+  num_workers: 2                        # 减少数据加载器内存
+
+training:
+  gradient_accumulation_steps: 8        # 通过累积模拟批次16
+  use_amp: true                         # 必须使用混合精度
+  
+  ema:
+    enabled: false                      # 关闭EMA节省显存
+
+system:
+  cudnn_benchmark: false                # 关闭自动调优节省显存
